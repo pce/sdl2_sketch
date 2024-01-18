@@ -9,7 +9,7 @@ set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
 # Source files
-set(SOURCE_FILES src/main.cpp)
+set(SOURCE_FILES src/main.cpp src/shapes.cpp)
 
 # Determine if we are building for Web (Emscripten)
 if(EMSCRIPTEN)

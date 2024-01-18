@@ -7,6 +7,10 @@
 #include <emscripten.h>
 #endif
 
+#include "shapes.h"
+
+using namespace Shapes;
+
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 600;
 const int CENTER_X = WINDOW_WIDTH / 2;
@@ -14,13 +18,6 @@ const int CENTER_Y = WINDOW_HEIGHT / 2;
 const int RADIUS = 100;
 const float PI = 3.14159265358979323846f;
 const int CAM_SPEED = 10;
-
-struct Circle
-{
-  SDL_Point center;
-  int radius;
-  SDL_Color color;
-};
 
 std::vector<Circle> circles;
 
@@ -30,144 +27,128 @@ SDL_Renderer *renderer;
 SDL_Point center = {.x = CENTER_X, .y = CENTER_Y};
 const int radius = RADIUS;
 
-SDL_Point cameraOffset = {.x = 0, .y = 0};
+// SDL_Point cameraOffset = {.x = 0, .y = 0};
 
-
-SDL_Color DynamicBlack = {0, 0, 0, 255}; // Black
+SDL_Color DynamicBlack = {0, 0, 0, 255};          // Black
 SDL_Color StructuralWhite = {255, 255, 255, 255}; // White
 
 std::vector<SDL_Color> bauhausColors = {
-    {230, 0, 26, 255}, // Bauhaus Red
+    {230, 0, 26, 255},  // Bauhaus Red
     {255, 239, 0, 255}, // Bauhaus Yellow
-    {0, 35, 149, 255}  // Bauhaus Blue
+    {0, 35, 149, 255}   // Bauhaus Blue
 };
 
-
-void draw_circle(SDL_Renderer *renderer, Circle circle)
+void draw_random_lines_only(SDL_Renderer *renderer, int lineCount)
 {
-  SDL_SetRenderDrawColor(renderer, circle.color.r, circle.color.g, circle.color.b, circle.color.a);
+  srand(static_cast<unsigned>(time(nullptr))); // Seed the random number generator
 
-  const int32_t diameter = (circle.radius * 2);
-  int32_t x = (circle.radius - 1);
-  int32_t y = 0;
-  int32_t tx = 1;
-  int32_t ty = 1;
-  int32_t error = (tx - diameter);
+  SDL_SetRenderDrawColor(renderer, bauhausColors[0].r, bauhausColors[0].g, bauhausColors[0].b, bauhausColors[0].a);
 
-  while (x >= y)
+  for (int i = 0; i < lineCount; ++i)
   {
-    // draw each octant
-    SDL_RenderDrawPoint(renderer, circle.center.x + x - cameraOffset.x, circle.center.y - y - cameraOffset.y);
-    SDL_RenderDrawPoint(renderer, circle.center.x + x - cameraOffset.x, circle.center.y + y - cameraOffset.y);
-    SDL_RenderDrawPoint(renderer, circle.center.x - x - cameraOffset.x, circle.center.y - y - cameraOffset.y);
-    SDL_RenderDrawPoint(renderer, circle.center.x - x - cameraOffset.x, circle.center.y + y - cameraOffset.y);
-    SDL_RenderDrawPoint(renderer, circle.center.x + y - cameraOffset.x, circle.center.y - x - cameraOffset.y);
-    SDL_RenderDrawPoint(renderer, circle.center.x + y - cameraOffset.x, circle.center.y + x - cameraOffset.y);
-    SDL_RenderDrawPoint(renderer, circle.center.x - y - cameraOffset.x, circle.center.y - x - cameraOffset.y);
-    SDL_RenderDrawPoint(renderer, circle.center.x - y - cameraOffset.x, circle.center.y + x - cameraOffset.y);
+    int randomWidth = (rand() % 3) + 1; // Random width between 1 and 3
+    int randomAngle = rand() % 360;     // Random angle between 0 and 359 degrees
+    // Length of the line
+    int length = CENTER_Y;
 
-    if (error <= 0)
-    {
-      ++y;
-      error += ty;
-      ty += 2;
-    }
+    // Calculate the line's end point using trigonometry
+    int endX = CENTER_X + length * cos(randomAngle * PI / 180.0);
+    int endY = CENTER_Y + length * sin(randomAngle * PI / 180.0);
 
-    if (error > 0)
+    // Draw the line with the specified random width
+    for (int w = 0; w < randomWidth; ++w)
     {
-      --x;
-      tx += 2;
-      error += (tx - diameter);
+      SDL_RenderDrawLine(renderer, CENTER_X, CENTER_Y, endX, endY + w);
     }
   }
 }
 
-void draw_filled_circle_simple(SDL_Renderer *renderer, Circle circle)
+void draw_rotated_rect(SDL_Renderer *renderer, Rect rect, int angle) {
+    double radAngle = angle * PI / 180.0;
+    int cx = rect.rect.x + rect.rect.w / 2; // Center x of rectangle
+    int cy = rect.rect.y + rect.rect.h / 2; // Center y of rectangle
+
+    // Corners of the rectangle
+    SDL_Point corners[4] = {
+        {rect.rect.x, rect.rect.y}, 
+        {rect.rect.x + rect.rect.w, rect.rect.y},
+        {rect.rect.x + rect.rect.w, rect.rect.y + rect.rect.h},
+        {rect.rect.x, rect.rect.y + rect.rect.h}
+    };
+
+    // Rotate each corner
+    for (int i = 0; i < 4; ++i) {
+        int dx = corners[i].x - cx;
+        int dy = corners[i].y - cy;
+
+        corners[i].x = cx + dx * cos(radAngle) - dy * sin(radAngle);
+        corners[i].y = cy + dx * sin(radAngle) + dy * cos(radAngle);
+    }
+
+    // Draw the rectangle using lines between rotated corners
+    SDL_SetRenderDrawColor(renderer, rect.color.r, rect.color.g, rect.color.b, rect.color.a);
+    for (int i = 0; i < 4; ++i) {
+        SDL_RenderDrawLine(renderer, corners[i].x, corners[i].y, corners[(i + 1) % 4].x, corners[(i + 1) % 4].y);
+    }
+}
+
+
+void draw_random_lines(SDL_Renderer *renderer, int lineCount)
 {
-  SDL_SetRenderDrawColor(renderer, circle.color.r, circle.color.g, circle.color.b, circle.color.a);
+  srand(static_cast<unsigned>(time(nullptr))); // Seed the random number generator
 
-  const int32_t diameter = (circle.radius * 2);
-
-  for (int w = 0; w < diameter; w++)
+  for (int i = 0; i < lineCount; ++i)
   {
-    for (int h = 0; h < diameter; h++)
+    SDL_SetRenderDrawColor(renderer, bauhausColors[i % bauhausColors.size()].r,
+                           bauhausColors[i % bauhausColors.size()].g,
+                           bauhausColors[i % bauhausColors.size()].b,
+                           bauhausColors[i % bauhausColors.size()].a);
+
+    int randomWidth = (rand() % 3) + 1; // Random width between 1 and 3
+    int randomAngle = rand() % 360;     // Random angle between 0 and 359 degrees
+    int length = CENTER_Y;
+
+    int endX = CENTER_X + length * cos(randomAngle * PI / 180.0);
+    int endY = CENTER_Y + length * sin(randomAngle * PI / 180.0);
+
+    // Draw the line
+    for (int w = 0; w < randomWidth; ++w)
     {
-      int32_t dx = circle.radius - w; // horizontal offset
-      int32_t dy = circle.radius - h; // vertical offset
-      if ((dx * dx + dy * dy) <= (circle.radius * circle.radius))
-      {
-        SDL_RenderDrawPoint(renderer, circle.center.x + dx, circle.center.y + dy);
-      }
+      SDL_RenderDrawLine(renderer, CENTER_X, CENTER_X, endX, endY + w);
+    }
+
+    // Every two lines, add a third line at 90 degrees
+    if (i % 2 == 1)
+    {
+      int thirdLineEndX = endX + length * cos((randomAngle + 90) * PI / 180.0);
+      int thirdLineEndY = endX + length * sin((randomAngle + 90) * PI / 180.0);
+
+      SDL_RenderDrawLine(renderer, endX, endY, thirdLineEndX, thirdLineEndY);
+
+      // Draw a rectangle at the end of the third line
+      Rect rectangle;
+      rectangle.rect = {thirdLineEndX, thirdLineEndY, rand() % 50 + 20, rand() % 50 + 20};
+      rectangle.color = bauhausColors[(i + 1) % bauhausColors.size()];
+      draw_rect(renderer, rectangle);
+    }
+
+    // Every fifth line, add a triangle that matches the sixth line
+    if (i % 5 == 4)
+    {
+      Triangle triangle;
+      triangle.p1 = {endX, endY};
+      triangle.p2 = {endX + 50, endY}; // Example size
+      triangle.p3 = {endX, endY + 50}; // Example size
+      triangle.color = bauhausColors[(i + 1) % bauhausColors.size()];
+      draw_filled_triangle(renderer, triangle);
     }
   }
-}
-
-void draw_filled_circle(SDL_Renderer *renderer, Circle circle)
-{
-    SDL_SetRenderDrawColor(renderer, circle.color.r, circle.color.g, circle.color.b, circle.color.a);
-
-    int32_t x0 = circle.center.x - cameraOffset.x;
-    int32_t y0 = circle.center.y - cameraOffset.y;
-    int32_t radius = circle.radius;
-
-    int32_t x = radius - 1;
-    int32_t y = 0;
-    int32_t tx = 1;
-    int32_t ty = 1;
-    int32_t error = tx - (radius << 1); // shifting left by 1 is the same as multiplying by 2
-
-    while (x >= y)
-    {
-        // Draw horizontal lines from the left to the right of the circle
-        SDL_RenderDrawLine(renderer, x0 - x, y0 + y, x0 + x, y0 + y);
-        SDL_RenderDrawLine(renderer, x0 - y, y0 + x, x0 + y, y0 + x);
-        SDL_RenderDrawLine(renderer, x0 - x, y0 - y, x0 + x, y0 - y);
-        SDL_RenderDrawLine(renderer, x0 - y, y0 - x, x0 + y, y0 - x);
-
-        if (error <= 0)
-        {
-            y++;
-            error += ty;
-            ty += 2;
-        }
-
-        if (error > 0)
-        {
-            x--;
-            tx += 2;
-            error += (tx - (radius << 1));
-        }
-    }
-}
-
-
-void draw_random_lines(SDL_Renderer *renderer, int lineCount) {
-    srand(static_cast<unsigned>(time(nullptr))); // Seed the random number generator
-
-    SDL_SetRenderDrawColor(renderer, bauhausColors[0].r, bauhausColors[0].g, bauhausColors[0].b, bauhausColors[0].a);
-
-
-    for (int i = 0; i < lineCount; ++i) {
-        int randomWidth = (rand() % 3) + 1; // Random width between 1 and 3
-        int randomAngle = rand() % 360; // Random angle between 0 and 359 degrees
-        // Length of the line
-        int length = CENTER_Y; 
-
-        // Calculate the line's end point using trigonometry
-        int endX = CENTER_X + length * cos(randomAngle * PI / 180.0);
-        int endY = CENTER_Y + length * sin(randomAngle * PI / 180.0);
-
-        // Draw the line with the specified random width
-        for (int w = 0; w < randomWidth; ++w) {
-            SDL_RenderDrawLine(renderer, CENTER_X, CENTER_Y, endX, endY + w);
-        }
-    }
 }
 
 void create_random_circles()
 {
   srand(time(nullptr)); // Seed for random number generation
-  int numCircles = 10;  // Number of circles to generate
+  int numCircles = 5;   // Number of circles to generate
 
   for (int i = 0; i < numCircles; ++i)
   {
@@ -190,22 +171,28 @@ void create_random_circles()
   }
 }
 
+void setup()
+{
+  Shapes::set_camera_offset(0, 0);
+  create_random_circles();
+}
+
 void update()
 {
   SDL_SetRenderDrawColor(renderer, /* RGBA: black */ 0x00, 0x00, 0x00, 0xFF);
   SDL_RenderClear(renderer);
 
-  draw_random_lines(renderer, 10); 
+  draw_random_lines(renderer, 7);
 
   for (const auto &circle : circles)
   {
     if (rand() % 2)
     {
-        draw_filled_circle(renderer, circle);
+      draw_filled_circle(renderer, circle);
     }
     else
     {
-        draw_circle(renderer, circle);
+      draw_circle(renderer, circle);
     }
   }
 
@@ -216,6 +203,7 @@ uint32_t ticksForNextKeyDown = 0;
 
 bool handle_events()
 {
+  static SDL_Point cameraOffset = {0, 0};
   SDL_Event event;
   SDL_PollEvent(&event);
   if (event.type == SDL_QUIT)
@@ -244,6 +232,7 @@ bool handle_events()
         cameraOffset.x -= CAM_SPEED;
         break;
       }
+      Shapes::set_camera_offset(cameraOffset.x, cameraOffset.y);
       update();
     }
   }
@@ -268,8 +257,7 @@ int main()
 
   SDL_CreateWindowAndRenderer(WINDOW_WIDTH, WINDOW_HEIGHT, 0, &window, &renderer);
 
-  create_random_circles();
-
+  setup();
   update();
   run_main_loop();
 
