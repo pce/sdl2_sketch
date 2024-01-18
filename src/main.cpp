@@ -145,7 +145,7 @@ void draw_random_lines(SDL_Renderer *renderer, int lineCount)
     // {
     //   Triangle triangle;
     //   triangle.p1 = {endX, endY};
-    //   triangle.p2 = {endX + 50, endY}; 
+    //   triangle.p2 = {endX + 50, endY};
     //   triangle.p3 = {endX, endY + 50};
     //   triangle.color = bauhausColors[(i + 1) % bauhausColors.size()];
     //   draw_filled_triangle(renderer, triangle);
@@ -155,8 +155,8 @@ void draw_random_lines(SDL_Renderer *renderer, int lineCount)
 
 void create_random_circles()
 {
-  srand(time(nullptr)); // Seed for random number generation
-  int numCircles = (rand() % 3) + 3;   // Number of circles to generate
+  srand(time(nullptr));              // Seed for random number generation
+  int numCircles = (rand() % 3) + 3; // Number of circles to generate
 
   for (int i = 0; i < numCircles; ++i)
   {
@@ -190,7 +190,7 @@ void update()
   SDL_SetRenderDrawColor(renderer, /* RGBA: black */ 0x00, 0x00, 0x00, 0xFF);
   SDL_RenderClear(renderer);
 
-  draw_random_lines(renderer,  (rand() % 5) + 3);
+  draw_random_lines(renderer, (rand() % 5) + 3);
 
   for (const auto &circle : circles)
   {
@@ -218,6 +218,7 @@ bool handle_events()
   {
     return false;
   }
+
   if (event.type == SDL_KEYDOWN)
   {
     uint32_t ticksNow = SDL_GetTicks();
@@ -241,6 +242,13 @@ bool handle_events()
         break;
       }
       Shapes::set_camera_offset(cameraOffset.x, cameraOffset.y);
+      update();
+    }
+  }
+  else if (event.type == SDL_MOUSEBUTTONDOWN)
+  {
+    if (event.button.button == SDL_BUTTON_LEFT)
+    {
       update();
     }
   }
