@@ -63,35 +63,36 @@ void draw_random_lines_only(SDL_Renderer *renderer, int lineCount)
   }
 }
 
-void draw_rotated_rect(SDL_Renderer *renderer, Rect rect, int angle) {
-    double radAngle = angle * PI / 180.0;
-    int cx = rect.rect.x + rect.rect.w / 2; // Center x of rectangle
-    int cy = rect.rect.y + rect.rect.h / 2; // Center y of rectangle
+void draw_rotated_rect(SDL_Renderer *renderer, Rect rect, int angle)
+{
+  double radAngle = angle * PI / 180.0;
+  int cx = rect.rect.x + rect.rect.w / 2; // Center x of rectangle
+  int cy = rect.rect.y + rect.rect.h / 2; // Center y of rectangle
 
-    // Corners of the rectangle
-    SDL_Point corners[4] = {
-        {rect.rect.x, rect.rect.y}, 
-        {rect.rect.x + rect.rect.w, rect.rect.y},
-        {rect.rect.x + rect.rect.w, rect.rect.y + rect.rect.h},
-        {rect.rect.x, rect.rect.y + rect.rect.h}
-    };
+  // Corners of the rectangle
+  SDL_Point corners[4] = {
+      {rect.rect.x, rect.rect.y},
+      {rect.rect.x + rect.rect.w, rect.rect.y},
+      {rect.rect.x + rect.rect.w, rect.rect.y + rect.rect.h},
+      {rect.rect.x, rect.rect.y + rect.rect.h}};
 
-    // Rotate each corner
-    for (int i = 0; i < 4; ++i) {
-        int dx = corners[i].x - cx;
-        int dy = corners[i].y - cy;
+  // Rotate each corner
+  for (int i = 0; i < 4; ++i)
+  {
+    int dx = corners[i].x - cx;
+    int dy = corners[i].y - cy;
 
-        corners[i].x = cx + dx * cos(radAngle) - dy * sin(radAngle);
-        corners[i].y = cy + dx * sin(radAngle) + dy * cos(radAngle);
-    }
+    corners[i].x = cx + dx * cos(radAngle) - dy * sin(radAngle);
+    corners[i].y = cy + dx * sin(radAngle) + dy * cos(radAngle);
+  }
 
-    // Draw the rectangle using lines between rotated corners
-    SDL_SetRenderDrawColor(renderer, rect.color.r, rect.color.g, rect.color.b, rect.color.a);
-    for (int i = 0; i < 4; ++i) {
-        SDL_RenderDrawLine(renderer, corners[i].x, corners[i].y, corners[(i + 1) % 4].x, corners[(i + 1) % 4].y);
-    }
+  // Draw the rectangle using lines between rotated corners
+  SDL_SetRenderDrawColor(renderer, rect.color.r, rect.color.g, rect.color.b, rect.color.a);
+  for (int i = 0; i < 4; ++i)
+  {
+    SDL_RenderDrawLine(renderer, corners[i].x, corners[i].y, corners[(i + 1) % 4].x, corners[(i + 1) % 4].y);
+  }
 }
-
 
 void draw_random_lines(SDL_Renderer *renderer, int lineCount)
 {
@@ -126,29 +127,36 @@ void draw_random_lines(SDL_Renderer *renderer, int lineCount)
       SDL_RenderDrawLine(renderer, endX, endY, thirdLineEndX, thirdLineEndY);
 
       // Draw a rectangle at the end of the third line
+      // Rect rectangle;
+      // rectangle.rect = {thirdLineEndX, thirdLineEndY, rand() % 50 + 20, rand() % 50 + 20};
+      // rectangle.color = bauhausColors[(i + 1) % bauhausColors.size()];
+      // draw_rect(renderer, rectangle);
+
+      // Draw a rotated rectangle at the end of the third line
       Rect rectangle;
-      rectangle.rect = {thirdLineEndX, thirdLineEndY, rand() % 50 + 20, rand() % 50 + 20};
+      rectangle.rect = {thirdLineEndX - 25, thirdLineEndY - 25, rand() % 50 + 20, rand() % 50 + 20}; // Centered on third line's end
       rectangle.color = bauhausColors[(i + 1) % bauhausColors.size()];
-      draw_rect(renderer, rectangle);
+      // draw_rotated_rect(renderer, rectangle, randomAngle + 90);
+      draw_rotated_rect(renderer, rectangle, (rand() % 1) ? randomAngle : randomAngle + 90);
     }
 
     // Every fifth line, add a triangle that matches the sixth line
-    if (i % 5 == 4)
-    {
-      Triangle triangle;
-      triangle.p1 = {endX, endY};
-      triangle.p2 = {endX + 50, endY}; // Example size
-      triangle.p3 = {endX, endY + 50}; // Example size
-      triangle.color = bauhausColors[(i + 1) % bauhausColors.size()];
-      draw_filled_triangle(renderer, triangle);
-    }
+    // if (i % 5 == 4)
+    // {
+    //   Triangle triangle;
+    //   triangle.p1 = {endX, endY};
+    //   triangle.p2 = {endX + 50, endY}; 
+    //   triangle.p3 = {endX, endY + 50};
+    //   triangle.color = bauhausColors[(i + 1) % bauhausColors.size()];
+    //   draw_filled_triangle(renderer, triangle);
+    // }
   }
 }
 
 void create_random_circles()
 {
   srand(time(nullptr)); // Seed for random number generation
-  int numCircles = 5;   // Number of circles to generate
+  int numCircles = (rand() % 3) + 3;   // Number of circles to generate
 
   for (int i = 0; i < numCircles; ++i)
   {
@@ -182,7 +190,7 @@ void update()
   SDL_SetRenderDrawColor(renderer, /* RGBA: black */ 0x00, 0x00, 0x00, 0xFF);
   SDL_RenderClear(renderer);
 
-  draw_random_lines(renderer, 7);
+  draw_random_lines(renderer,  (rand() % 5) + 3);
 
   for (const auto &circle : circles)
   {
