@@ -1,5 +1,7 @@
 #include <cmath>
 #include <vector>
+#include <cstdlib>
+#include <ctime>
 #include <SDL2/SDL.h>
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -17,6 +19,7 @@ struct Circle
 {
   SDL_Point center;
   int radius;
+  SDL_Color color;
 };
 
 std::vector<Circle> circles;
@@ -29,10 +32,20 @@ const int radius = RADIUS;
 
 SDL_Point cameraOffset = {.x = 0, .y = 0};
 
+
+SDL_Color DynamicBlack = {0, 0, 0, 255}; // Black
+SDL_Color StructuralWhite = {255, 255, 255, 255}; // White
+
+std::vector<SDL_Color> bauhausColors = {
+    {230, 0, 26, 255}, // Bauhaus Red
+    {255, 239, 0, 255}, // Bauhaus Yellow
+    {0, 35, 149, 255}  // Bauhaus Blue
+};
+
+
 void draw_circle(SDL_Renderer *renderer, Circle circle)
 {
-
-  SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+  SDL_SetRenderDrawColor(renderer, circle.color.r, circle.color.g, circle.color.b, circle.color.a);
 
   const int32_t diameter = (circle.radius * 2);
   int32_t x = (circle.radius - 1);
@@ -69,42 +82,112 @@ void draw_circle(SDL_Renderer *renderer, Circle circle)
   }
 }
 
-void draw_flower_at_position(int x, int y)
+void draw_filled_circle_simple(SDL_Renderer *renderer, Circle circle)
 {
-  for (int i = 0; i < 5; ++i)
-  {
-    float angle = (2 * PI / 5) * i;
-    int center_x = x + cos(angle) * radius;
-    int center_y = y + sin(angle) * radius;
+  SDL_SetRenderDrawColor(renderer, circle.color.r, circle.color.g, circle.color.b, circle.color.a);
 
-    Circle newCircle = {{static_cast<int>(center_x), static_cast<int>(center_y)}, radius};
-    circles.push_back(newCircle);
+  const int32_t diameter = (circle.radius * 2);
+
+  for (int w = 0; w < diameter; w++)
+  {
+    for (int h = 0; h < diameter; h++)
+    {
+      int32_t dx = circle.radius - w; // horizontal offset
+      int32_t dy = circle.radius - h; // vertical offset
+      if ((dx * dx + dy * dy) <= (circle.radius * circle.radius))
+      {
+        SDL_RenderDrawPoint(renderer, circle.center.x + dx, circle.center.y + dy);
+      }
+    }
   }
 }
 
-void apply_rules()
+void draw_filled_circle(SDL_Renderer *renderer, Circle circle)
 {
-  circles.clear();
+    SDL_SetRenderDrawColor(renderer, circle.color.r, circle.color.g, circle.color.b, circle.color.a);
 
-  // initial position of the first flower
-  int initial_x = CENTER_X;
-  int initial_y = CENTER_Y;
+    int32_t x0 = circle.center.x - cameraOffset.x;
+    int32_t y0 = circle.center.y - cameraOffset.y;
+    int32_t radius = circle.radius;
 
-  draw_flower_at_position(initial_x, initial_y);
+    int32_t x = radius - 1;
+    int32_t y = 0;
+    int32_t tx = 1;
+    int32_t ty = 1;
+    int32_t error = tx - (radius << 1); // shifting left by 1 is the same as multiplying by 2
 
-  // determine the offset for placing additional flowers
-  int offset_x = 3 * radius;
-  int offset_y = sqrt(3) * radius;
+    while (x >= y)
+    {
+        // Draw horizontal lines from the left to the right of the circle
+        SDL_RenderDrawLine(renderer, x0 - x, y0 + y, x0 + x, y0 + y);
+        SDL_RenderDrawLine(renderer, x0 - y, y0 + x, x0 + y, y0 + x);
+        SDL_RenderDrawLine(renderer, x0 - x, y0 - y, x0 + x, y0 - y);
+        SDL_RenderDrawLine(renderer, x0 - y, y0 - x, x0 + y, y0 - x);
 
-  // additional flowers to the right
-  for (int i = 1; i <= 2; ++i)
+        if (error <= 0)
+        {
+            y++;
+            error += ty;
+            ty += 2;
+        }
+
+        if (error > 0)
+        {
+            x--;
+            tx += 2;
+            error += (tx - (radius << 1));
+        }
+    }
+}
+
+
+void draw_random_lines(SDL_Renderer *renderer, int lineCount) {
+    srand(static_cast<unsigned>(time(nullptr))); // Seed the random number generator
+
+    SDL_SetRenderDrawColor(renderer, bauhausColors[0].r, bauhausColors[0].g, bauhausColors[0].b, bauhausColors[0].a);
+
+
+    for (int i = 0; i < lineCount; ++i) {
+        int randomWidth = (rand() % 3) + 1; // Random width between 1 and 3
+        int randomAngle = rand() % 360; // Random angle between 0 and 359 degrees
+        // Length of the line
+        int length = CENTER_Y; 
+
+        // Calculate the line's end point using trigonometry
+        int endX = CENTER_X + length * cos(randomAngle * PI / 180.0);
+        int endY = CENTER_Y + length * sin(randomAngle * PI / 180.0);
+
+        // Draw the line with the specified random width
+        for (int w = 0; w < randomWidth; ++w) {
+            SDL_RenderDrawLine(renderer, CENTER_X, CENTER_Y, endX, endY + w);
+        }
+    }
+}
+
+void create_random_circles()
+{
+  srand(time(nullptr)); // Seed for random number generation
+  int numCircles = 10;  // Number of circles to generate
+
+  for (int i = 0; i < numCircles; ++i)
   {
-    draw_flower_at_position(initial_x + i * offset_x, initial_y);
-  }
+    Circle circle;
+    circle.center.x = rand() % WINDOW_WIDTH;
+    circle.center.y = rand() % WINDOW_HEIGHT;
+    circle.radius = (rand() % 50) + 25; // Random radius between 25 and 75
 
-  //  additional flowers to the upper left and lower left
-  draw_flower_at_position(initial_x - offset_x, initial_y - offset_y);
-  draw_flower_at_position(initial_x - offset_x, initial_y + offset_y);
+    // Random color
+    // circle.color.r = rand() % 256;
+    // circle.color.g = rand() % 256;
+    // circle.color.b = rand() % 256;
+    // circle.color.a = 255; // Full opacity
+
+    // Randomly select one of the Bauhaus colors
+    int colorIndex = rand() % bauhausColors.size(); // Random index for color
+    circle.color = bauhausColors[colorIndex];
+
+    circles.push_back(circle);
+  }
 }
 
 void update()
@@ -112,10 +195,20 @@ void update()
   SDL_SetRenderDrawColor(renderer, /* RGBA: black */ 0x00, 0x00, 0x00, 0xFF);
   SDL_RenderClear(renderer);
 
+  draw_random_lines(renderer, 10); 
+
   for (const auto &circle : circles)
   {
-    draw_circle(renderer, circle);
+    if (rand() % 2)
+    {
+        draw_filled_circle(renderer, circle);
+    }
+    else
+    {
+        draw_circle(renderer, circle);
+    }
   }
+
   SDL_RenderPresent(renderer);
 }
 
@@ -175,7 +268,7 @@ int main()
 
   SDL_CreateWindowAndRenderer(WINDOW_WIDTH, WINDOW_HEIGHT, 0, &window, &renderer);
 
-  apply_rules();
+  create_random_circles();
 
   update();
   run_main_loop();
